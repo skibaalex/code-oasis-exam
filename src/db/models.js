@@ -14,11 +14,12 @@ const { ObjectId } = mongoose.Types
 
 
 const bookSchema = new Schema({
-    name: {type: String, required: true},
-    description: {type: String, required: true},
-    author: {type: ObjectId, required: true, ref: 'Author'},
-    publisher: {type: ObjectId, required: true, ref: 'Publisher'},
-    cover: {type: String, required: true}
+    name: { type: String, required: true },
+    description: { type: String, required: true },
+    author: { type: String, required: true, ref: 'Author' },
+    publisher: { type: String, required: true, ref: 'Publisher' },
+    cover: { type: String, required: true },
+    price: { type: String, require: true }
 })
 
 /**
@@ -29,12 +30,12 @@ const bookSchema = new Schema({
  */
 
 const authorSchema = new Schema({
-    name: {type: String, require: true},
-    books: [{type: ObjectId, ref: 'Book'}]
+    name: { type: String, require: true },
+    books: [{ type: ObjectId, ref: 'Book' }]
 })
 const publisherSchema = new Schema({
-    name: {type: String, require: true},
-    books: [{type: ObjectId, ref: 'Book'}]
+    name: { type: String, require: true },
+    books: [{ type: ObjectId, ref: 'Book' }]
 })
 
 /*
@@ -48,11 +49,18 @@ const publisherSchema = new Schema({
 */
 
 const userSchema = new Schema({
-    username: {type: String, requiered: true, unique: true},
-    password: {type: String, requiered: true, select: false},
-    books: [{type: ObjectId, ref: 'Book'}],
-    admin: {type: Boolean, default: false}
+    username: { type: String, requiered: true, unique: true },
+    password: { type: String, requiered: true, select: false },
+    admin: { type: Boolean, default: false }
 })
+
+const purchaseSchema = new Schema({
+    user: { type: ObjectId, ref: 'User' },
+    books: [{ type: ObjectId, ref: 'Book' }]
+})
+
+
+
 
 /**
  * Initialize Models
@@ -62,10 +70,14 @@ const Book = mongoose.model('Book', bookSchema);
 const Publisher = mongoose.model('Publisher', publisherSchema);
 const Author = mongoose.model('Author', authorSchema);
 const User = mongoose.model('User', userSchema);
+const Purchase = mongoose.model('Purchase', purchaseSchema)
+
+
 
 module.exports = {
     Book,
     Publisher,
     Author,
-    User
+    User,
+    Purchase
 }

@@ -1,22 +1,23 @@
 const { mongoose } = require('../db');
-const { Book, User } = require('../db/models');
+const { Book, User, Purchase } = require('../db/models');
 const jwt = require('jsonwebtoken');
-
+const { ObjectId } = mongoose.Types
 
 /**
  * Get a list of books
  */
-const getListOfBooks = (req,res) => {
+const getListOfBooks = (req, res) => {
     Book.find()
 }
 
 /**
  * Add a new book
  */
-const addBook = (req,res) => {
+const addBook = (req, res) => {
     const book = new Book(req.body)
-    book.save((err,book) => {
-        if(err) return res.status(400).send({message: err})
+    console.log(req.body)
+    book.save((err, book) => {
+        if (err) return res.status(400).send({ message: err })
         return res.status(200).send(book)
     })
 }
@@ -27,8 +28,8 @@ const addBook = (req,res) => {
  */
 const getBook = (req, res) => {
     const { id } = req.params;
-    Book.findOne({_id: id}, (err, book) => {
-        if(err) return res.send(400).send({err})
+    Book.findOne({ _id: id }, (err, book) => {
+        if (err) return res.status(400).send({ err })
         return res.status(200).send(book)
     })
 }
@@ -38,9 +39,10 @@ const getBook = (req, res) => {
  * Update a Book
  */
 const updateBook = (req, res) => {
-    const { id, ...update } = req.body
-    Book.findByIdAndUpdate(id, update, (err, book) => {
-        if(err) return res.send(400).send({err})
+    const { _id, values } = req.body
+    console.log(values.description)
+    Book.findByIdAndUpdate(_id, { ...values }, (err, book) => {
+        if (err) return res.send(400).send({ err })
         return res.status(200).send(book)
     })
 }
@@ -49,11 +51,12 @@ const updateBook = (req, res) => {
 /**
  * Delete a Book
  */
-const deleteBook = (req,res) => {
-    const { bookId } = req.body
-    Book.findByIdAndDelete(bookId, (err) => {
-        if(err) return res.send(400).send({err})
-        return res.status(200).send({status: 'deleted'})
+const deleteBook = (req, res) => {
+    const { id } = req.params
+    console.log(id)
+    Book.findByIdAndDelete(id, (err) => {
+        if (err) return res.send(400).send({ err })
+        return res.status(200).send({ status: 'deleted' })
     })
 }
 
@@ -62,19 +65,59 @@ const deleteBook = (req,res) => {
  * Purchase a book
  */
 const buyBook = (req, res) => {
-    const { user } = req;
     const { bookId } = req.body
-    User.findOneAndUpdate({_id: user._id}, { $addToSet: { books: mongoose.Types.ObjectId(bookId) }}, (err, user) => {
-        if(err) return res.send(400).send({err})
-        return res.json({ token: jwt.sign({ user }, process.env.SECRET_KEY)});
+    Purchase.exists({ user: req.user._id }).then(exists => {
+        if (exists) {
+            Purchase.findOneAndUpdate({ user: req.user._id }, { '$addToSet': { 'books': bookId } }, (err, result) => {
+                console.log(err)
+                if (err) return res.status(400).send(err)
+                res.status(200).send(result)
+            })
+        } else {
+            const purchase = new Purchase({ user: ObjectId(req.user._id), books: [ObjectId(bookId)] })
+            purchase.save().then(() => {
+                purchase.populate('books').execPopulate().then(books => {
+                    return res.status(200).send(books)
+                })
+            })
+
+        }
     })
 }
-    
+
+/**
+ * Get a list of the purchased books
+ */
+
+const myBooks = (req, res) => {
+    const { user } = req;
+    Purchase.findOne({ user: user._id }).exec((err, result) => {
+        if (err) return res.status(400).send({ err })
+        return res.status(200).send(!result ? null : result.books)
+    })
+}
+
+/**
+ * Search Queries
+ */
+
+const searchBooks = (req, res) => {
+    const { query } = req.params;
+    const regex = new RegExp(query, 'i');
+    Book.find({ name: regex }, (err, results) => {
+        if (err) return res.status(400).send(err)
+        return res.status(200).send(results)
+    })
+}
+
+
 module.exports = {
     addBook,
     getBook,
     updateBook,
     deleteBook,
     buyBook,
-    getListOfBooks
+    getListOfBooks,
+    myBooks,
+    searchBooks
 }
